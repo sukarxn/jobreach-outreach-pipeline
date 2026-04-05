@@ -66,8 +66,8 @@ def run_scraper(config: dict) -> list[dict]:
         try:
             run = client.actor(ACTOR_ID).call(
                 run_input={
-                    "startUrls": [{"url": u} for u in batch_urls],
-                    "count": 25,   # max results per URL
+                    "urls": batch_urls,
+                    "count": 25,
                 },
                 timeout_secs=300,
             )
