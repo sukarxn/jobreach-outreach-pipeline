@@ -103,6 +103,9 @@ class AgentHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         pass  # suppress default access log noise
 
+    def handle_error(self, *args):
+        pass  # suppress BrokenPipeError noise in console
+
     def _cors(self):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
@@ -113,25 +116,37 @@ class AgentHandler(BaseHTTPRequestHandler):
             return True
         return self.headers.get("X-Agent-Secret", "") == SECRET
 
+    def _send_json(self, code: int, data: dict):
+        """Send a JSON response, silently ignoring broken pipe errors."""
+        try:
+            body = json.dumps(data).encode()
+            self.send_response(code)
+            self._cors()
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+
     def do_OPTIONS(self):
-        self.send_response(204)
-        self._cors()
-        self.end_headers()
+        try:
+            self.send_response(204)
+            self._cors()
+            self.end_headers()
+        except (BrokenPipeError, ConnectionResetError):
+            pass
 
     def do_GET(self):
         path = urlparse(self.path).path
 
         # Health check
         if path == "/health":
-            self.send_response(200)
-            self._cors()
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(json.dumps({
+            self._send_json(200, {
                 "ok": True,
                 "is_running": _is_running,
                 "last_run": _last_run,
-            }).encode())
+            })
             return
 
         # SSE log stream
@@ -172,8 +187,11 @@ class AgentHandler(BaseHTTPRequestHandler):
                     pass
             return
 
-        self.send_response(404)
-        self.end_headers()
+        try:
+            self.send_response(404)
+            self.end_headers()
+        except (BrokenPipeError, ConnectionResetError):
+            pass
 
     def do_POST(self):
         path = urlparse(self.path).path
@@ -181,34 +199,25 @@ class AgentHandler(BaseHTTPRequestHandler):
         # Trigger pipeline run
         if path == "/run":
             if not self._check_secret():
-                self.send_response(401)
-                self._cors()
-                self.send_header("Content-Type", "application/json")
-                self.end_headers()
-                self.wfile.write(b'{"error":"unauthorized"}')
+                self._send_json(401, {"error": "unauthorized"})
                 return
 
             if _is_running:
-                self.send_response(409)
-                self._cors()
-                self.send_header("Content-Type", "application/json")
-                self.end_headers()
-                self.wfile.write(b'{"error":"already_running"}')
+                self._send_json(409, {"error": "already_running"})
                 return
 
             # Start pipeline in background thread
             t = threading.Thread(target=run_pipeline, daemon=True)
             t.start()
 
-            self.send_response(200)
-            self._cors()
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(json.dumps({"ok": True, "message": "Pipeline started"}).encode())
+            self._send_json(200, {"ok": True, "message": "Pipeline started"})
             return
 
-        self.send_response(404)
-        self.end_headers()
+        try:
+            self.send_response(404)
+            self.end_headers()
+        except (BrokenPipeError, ConnectionResetError):
+            pass
 
 
 def main():
@@ -229,6 +238,8 @@ def main():
     print(f"")
 
     server = HTTPServer(("0.0.0.0", PORT), AgentHandler)
+    # Suppress BrokenPipeError tracebacks from the server's error handler
+    server.handle_error = lambda *args: None
     try:
         server.serve_forever()
     except KeyboardInterrupt:
