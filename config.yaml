@@ -1,0 +1,39 @@
+job_titles:
+  - "Backend Developer Intern"
+  - "Frontend Developer Intern"
+  - "Full Stack Developer Intern"
+  - "Software Engineer Intern"
+  - "Software Development Intern"
+
+locations:
+  - "Remote"
+  - "Bangalore"
+  - "Hyderabad"
+  - "Europe"
+
+seniority_keywords:
+  - "intern"
+  - "internship"
+  - "junior"
+  - "entry level"
+  - "entry-level"
+  - "fresher"
+  - "trainee"
+
+# Titles containing these words will be SKIPPED
+senior_exclusions:
+  - "senior"
+  - "lead"
+  - "manager"
+  - "director"
+  - "principal"
+  - "staff"
+  - "head of"
+
+blocklist_companies: []   # e.g. ["TCS", "Infosys"]
+
+max_applications_per_run: 30
+posted_within_seconds: 18000   # 5 hours = 18000 seconds → LinkedIn f_TPR=r18000
+candidate_name: "Sukaran Gulati"
+claude_model: "claude-sonnet-4-20250514"
+master_resume_path: "data/master_resume.md"
