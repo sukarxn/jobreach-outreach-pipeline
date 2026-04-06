@@ -98,23 +98,22 @@ def run_scraper(config: dict) -> list[dict]:
 
 
 def normalize_job(item: dict) -> dict:
-    """Map Apify output fields to our internal schema."""
+    """Map Apify output fields to our internal schema (must match Supabase columns exactly)."""
     return {
-        "id":                  str(item.get("id", "")),
-        "job_url":             item.get("link", ""),
-        "job_title":           item.get("title", ""),
-        "company_name":        item.get("companyName", ""),
-        "company_linkedin_url":item.get("companyLinkedinUrl", ""),
-        "location":            item.get("location", ""),
-        "posted_at":           item.get("postedAt", ""),
-        "description_text":    item.get("descriptionText", ""),
-        "seniority_level":     item.get("seniorityLevel", ""),
-        "employment_type":     item.get("employmentType", ""),
-        "apply_url":           item.get("applyUrl", "") or item.get("link", ""),
-        "applicants_count":    item.get("applicantsCount", ""),
-        "recruiter_name":      item.get("jobPosterName", ""),
-        "recruiter_title":     item.get("jobPosterTitle", ""),
-        "recruiter_photo":     item.get("jobPosterPhoto", ""),
-        "recruiter_linkedin":  item.get("jobPosterProfileUrl", ""),
-        "message_status":      "scraped",
+        "id":                str(item.get("id", "")),
+        "job_url":           item.get("link", ""),
+        "job_title":         item.get("title", ""),
+        "company_name":      item.get("companyName", ""),
+        "location":          item.get("location", ""),
+        "posted_at":         item.get("postedAt", ""),
+        "description_text":  item.get("descriptionText", ""),
+        "seniority_level":   item.get("seniorityLevel", ""),
+        "employment_type":   item.get("employmentType", ""),
+        "apply_url":         item.get("applyUrl", "") or item.get("link", ""),
+        "recruiter_name":    item.get("jobPosterName", ""),
+        "recruiter_title":   item.get("jobPosterTitle", ""),
+        "recruiter_photo":   item.get("jobPosterPhoto", ""),
+        "recruiter_linkedin":item.get("jobPosterProfileUrl", ""),
+        "message_status":    "scraped",
+        "notes":             f"applicants: {item.get('applicantsCount', '')}" if item.get("applicantsCount") else None,
     }

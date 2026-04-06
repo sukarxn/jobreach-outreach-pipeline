@@ -67,8 +67,16 @@ def job_exists(job_id: str) -> bool:
 
 def upsert_job(job: dict) -> bool:
     """Insert or update a job record. Returns True on success."""
+    # Strip any keys not in the Supabase schema to prevent PostgREST rejection
+    ALLOWED_COLUMNS = {
+        "id", "job_url", "job_title", "company_name", "location", "posted_at",
+        "description_text", "seniority_level", "employment_type", "apply_url",
+        "recruiter_name", "recruiter_title", "recruiter_photo", "recruiter_linkedin",
+        "outreach_message", "message_status", "scraped_at", "exported_at", "notes",
+    }
+    clean = {k: v for k, v in job.items() if k in ALLOWED_COLUMNS}
     try:
-        get_client().table("jobs").upsert(job, on_conflict="id").execute()
+        get_client().table("jobs").upsert(clean, on_conflict="id").execute()
         return True
     except Exception as e:
         log.error(f"DB upsert_job error for {job.get('id')}: {e}")
