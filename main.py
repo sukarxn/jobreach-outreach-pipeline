@@ -23,6 +23,7 @@ from utils.dashboard_sync import post_jobs, post_run
 
 # ── modules ──────────────────────────────────────────────────────────────────
 from modules.scraper import run_scraper
+from modules.greenhouse_scraper import run_greenhouse_scraper
 from modules.filter import filter_jobs
 from modules.db import upsert_job, update_outreach, update_status, get_run_count_today
 from modules.outreach_writer import generate_outreach_message, extract_resume_summary
@@ -64,18 +65,34 @@ def main():
     max_per_run    = config.get("max_applications_per_run", 30)
 
     # ── Scrape ────────────────────────────────────────────────────────────────
-    log.info("STEP 1: Scraping LinkedIn jobs via Apify...")
+    log.info("STEP 1a: Scraping LinkedIn jobs via Apify...")
     try:
-        raw_jobs = run_scraper(config)
+        linkedin_jobs = run_scraper(config)
+        for job in linkedin_jobs:
+            job.setdefault("source", "linkedin")
     except Exception as e:
-        log.error(f"Scraper failed: {e}")
-        sys.exit(1)
+        log.error(f"LinkedIn scraper failed: {e}")
+        linkedin_jobs = []
+
+    # Greenhouse (free public API — no key required)
+    greenhouse_jobs = []
+    if config.get("greenhouse_companies"):
+        log.info(f"STEP 1b: Scraping {len(config['greenhouse_companies'])} Greenhouse board(s)...")
+        try:
+            greenhouse_jobs = run_greenhouse_scraper(config)
+            log.info(f"Greenhouse: {len(greenhouse_jobs)} jobs found")
+        except Exception as e:
+            log.error(f"Greenhouse scraper failed: {e}")
+    else:
+        log.info("STEP 1b: No greenhouse_companies configured — skipping Greenhouse")
+
+    raw_jobs = linkedin_jobs + greenhouse_jobs
 
     if not raw_jobs:
-        log.warning("No jobs returned from scraper. Exiting.")
+        log.warning("No jobs returned from any source. Exiting.")
         sys.exit(0)
 
-    log.info(f"Scraped {len(raw_jobs)} raw jobs")
+    log.info(f"Scraped {len(raw_jobs)} total jobs ({len(linkedin_jobs)} LinkedIn + {len(greenhouse_jobs)} Greenhouse)")
 
     # ── Filter ────────────────────────────────────────────────────────────────
     log.info("STEP 2: Filtering jobs...")
@@ -88,7 +105,7 @@ def main():
 
     if not accepted_jobs:
         log.warning("No jobs passed filters. Nothing to process.")
-        _print_summary(start_time, len(raw_jobs), filter_stats, 0, 0, [])
+        _print_summary(start_time, len(raw_jobs), filter_stats, 0, 0, [], len(linkedin_jobs), len(greenhouse_jobs))
         sys.exit(0)
 
     log.info(f"{len(accepted_jobs)} jobs passed filters")
@@ -151,15 +168,15 @@ def main():
     )
 
     # ── Summary ───────────────────────────────────────────────────────────────
-    _print_summary(start_time, len(raw_jobs), filter_stats, len(generated), failed, csv_path)
+    _print_summary(start_time, len(raw_jobs), filter_stats, len(generated), failed, csv_path, len(linkedin_jobs), len(greenhouse_jobs))
 
 
-def _print_summary(start_time, scraped, stats, generated, failed, csv_path):
+def _print_summary(start_time, scraped, stats, generated, failed, csv_path, linkedin_count=0, greenhouse_count=0):
     elapsed = (datetime.now() - start_time).seconds
     log.info("=" * 60)
     log.info("PIPELINE COMPLETE")
     log.info(f"  Duration     : {elapsed}s")
-    log.info(f"  Scraped      : {scraped}")
+    log.info(f"  Scraped      : {scraped} (LinkedIn: {linkedin_count} | Greenhouse: {greenhouse_count})")
     log.info(f"  Accepted     : {stats.get('accepted', generated)}")
     log.info(f"  Filtered out : duplicate={stats.get('duplicate',0)} | "
              f"too_senior={stats.get('too_senior',0)} | "

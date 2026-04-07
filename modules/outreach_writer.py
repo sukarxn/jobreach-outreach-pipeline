@@ -40,22 +40,32 @@ def generate_outreach_message(job: dict, resume_summary: str, candidate_name: st
     Generate a personalized outreach message for one job.
     Returns the message string or None on failure.
     """
-    recruiter_name  = job.get("recruiter_name") or "there"
+    recruiter_name  = (job.get("recruiter_name") or "").strip()
     recruiter_title = job.get("recruiter_title") or "Recruiter"
     company_name    = job.get("company_name") or "your company"
     job_title       = job.get("job_title") or "the internship role"
     location        = job.get("location") or "the listed location"
+    source          = job.get("source", "linkedin")
 
-    user_prompt = f"""Recruiter: {recruiter_name} ({recruiter_title})
+    # Greenhouse jobs never have a recruiter — address the hiring team generically
+    if not recruiter_name:
+        addressee    = f"{company_name} Hiring Team"
+        recruiter_line = f"Recipient: {company_name} Hiring Team (no specific recruiter — address generically as 'Hi {company_name} Team,')"
+    else:
+        addressee    = recruiter_name
+        recruiter_line = f"Recruiter: {recruiter_name} ({recruiter_title})"
+
+    user_prompt = f"""{recruiter_line}
 Company: {company_name}
 Role: {job_title}
 Location: {location}
 Candidate: {candidate_name}
+Source: {source}
 
 Candidate background (brief resume summary):
 {resume_summary}
 
-Write an outreach message from {candidate_name} to {recruiter_name} for this specific internship role."""
+Write an outreach message from {candidate_name} to {addressee} for this specific internship role."""
 
     try:
         client = get_anthropic_client()

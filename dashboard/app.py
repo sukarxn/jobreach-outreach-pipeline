@@ -299,7 +299,7 @@ def main():
     with tab2:
         st.markdown(f"**{len(jobs)} total jobs**")
 
-        f1, f2, f3 = st.columns(3)
+        f1, f2, f3, f4 = st.columns(4)
         with f1:
             status_filter = st.multiselect(
                 "Status", STATUS_OPTIONS,
@@ -310,6 +310,11 @@ def main():
             companies = sorted({j.get("company_name", "") for j in jobs if j.get("company_name")})
             company_filter = st.multiselect("Company", companies, key="hist_company")
         with f3:
+            source_filter = st.multiselect(
+                "Source", ["linkedin", "greenhouse"],
+                key="hist_source",
+            )
+        with f4:
             search = st.text_input("Search", placeholder="title, company, recruiter...", key="hist_search")
 
         filtered = jobs
@@ -317,6 +322,8 @@ def main():
             filtered = [j for j in filtered if j.get("message_status") in status_filter]
         if company_filter:
             filtered = [j for j in filtered if j.get("company_name") in company_filter]
+        if source_filter:
+            filtered = [j for j in filtered if j.get("source", "linkedin") in source_filter]
         if search:
             t = search.lower()
             filtered = [j for j in filtered if
@@ -395,8 +402,10 @@ def _render_jobs(jobs_list, key_prefix=""):
         job_url   = job.get("job_url") or ""
         apply_url = job.get("apply_url") or ""
 
+        source = job.get("source", "linkedin")
+        source_badge = "🟦 LI" if source == "linkedin" else "🟩 GH"
         label = STATUS_EMOJI.get(status, status)
-        header = f"**{title}** @ {company} · {location} · `{label}`"
+        header = f"{source_badge} **{title}** @ {company} · {location} · `{label}`"
 
         with st.expander(header, expanded=False):
             c1, c2, c3 = st.columns([2, 2, 1])

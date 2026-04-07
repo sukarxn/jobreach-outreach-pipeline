@@ -32,6 +32,11 @@ senior_exclusions:
 
 blocklist_companies: []   # e.g. ["TCS", "Infosys"]
 
+# Greenhouse board tokens — find them at: https://boards.greenhouse.io/{token}
+# Examples: stripe, notion, linear, vercel, figma, rippling
+# Leave empty to skip Greenhouse scraping entirely.
+greenhouse_companies: []
+
 max_applications_per_run: 30
 posted_within_seconds: 18000   # 5 hours = 18000 seconds → LinkedIn f_TPR=r18000
 candidate_name: "Sukaran Gulati"

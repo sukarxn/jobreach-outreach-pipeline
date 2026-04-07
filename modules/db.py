@@ -39,7 +39,8 @@ CREATE TABLE IF NOT EXISTS jobs (
 
   scraped_at          TIMESTAMPTZ DEFAULT NOW(),
   exported_at         TIMESTAMPTZ,
-  notes               TEXT
+  notes               TEXT,
+  source              TEXT DEFAULT 'linkedin'
 );
 """
 
@@ -73,6 +74,7 @@ def upsert_job(job: dict) -> bool:
         "description_text", "seniority_level", "employment_type", "apply_url",
         "recruiter_name", "recruiter_title", "recruiter_photo", "recruiter_linkedin",
         "outreach_message", "message_status", "scraped_at", "exported_at", "notes",
+        "source",
     }
     clean = {k: v for k, v in job.items() if k in ALLOWED_COLUMNS}
     try:

@@ -84,8 +84,10 @@ def filter_jobs(raw_jobs: list[dict], config: dict) -> tuple[list[dict], dict]:
             job["message_status"] = "filtered_out"
             continue
 
-        # 6. Must have a recruiter to message
-        if not recruiter:
+        # 6. Must have a recruiter to message — EXCEPT for Greenhouse jobs
+        #    (Greenhouse API never exposes recruiter info; outreach_writer handles the fallback)
+        source = job.get("source", "linkedin")
+        if not recruiter and source != "greenhouse":
             log.debug(f"SKIP no_recruiter: {job.get('job_title')} @ {job.get('company_name')}")
             stats["no_recruiter"] += 1
             job["message_status"] = "filtered_out"
